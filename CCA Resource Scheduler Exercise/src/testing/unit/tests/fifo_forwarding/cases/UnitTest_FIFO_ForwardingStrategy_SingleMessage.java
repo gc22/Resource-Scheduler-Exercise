@@ -7,6 +7,7 @@ import static org.junit.Assert.*;
 
 import java.net.PasswordAuthentication;
 import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.After;
@@ -52,22 +53,23 @@ public class UnitTest_FIFO_ForwardingStrategy_SingleMessage {
 	}
 
 	private void displayEventList() {
-		List<MessageArrivedEvent> eventList = gateway.getMessageArrivedEventList();
+		Queue<MessageArrivedEvent> eventList = gateway.getMessageArrivedEventQueue();
 		eventList.forEach((msg)->{
 			System.out.println(msg.getTimestamp() + " :: " + msg.getMessage());
 		});
 	}
 
 	@Test
-	public void checkNumberOfArrivedEventsSize(){
-		assertEquals("Size of Msg Received List", expectedNumberOfMessagesExpected, gateway.getMessageArrivedEventList().size());
-	}
-
-	@Test
 	public void checkMessageOrder() {
-		List<MessageArrivedEvent> eventList = gateway.getMessageArrivedEventList();
+		checkNumberOfArrivedEventsSize();
+		Queue<MessageArrivedEvent> eventList = gateway.getMessageArrivedEventQueue();
 		if(eventList.size() > 0){
-			assertEquals("First Msg Group Id Test", eventList.get(0).getMessage().getGroupId().getInternalId(), expectedGroupId);
+			assertEquals("First Msg Group Id Test", eventList.element().getMessage().getGroupId().getInternalId(), expectedGroupId);
 		}
 	}
+	
+	private void checkNumberOfArrivedEventsSize(){
+		assertEquals("Size of Msg Received List", expectedNumberOfMessagesExpected, gateway.getMessageArrivedEventQueue().size());
+	}
+
 }

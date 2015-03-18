@@ -8,6 +8,7 @@ import static org.junit.Assert.*;
 import java.net.PasswordAuthentication;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.After;
@@ -65,24 +66,20 @@ public class UnitTest_FIFO_ForwardingStrategy_TwoMessageGroupsInterleaving {
 	}
 
 	private void displayEventList() {
-		List<MessageArrivedEvent> eventList = gateway.getMessageArrivedEventList();
+		Queue<MessageArrivedEvent> eventList = gateway.getMessageArrivedEventQueue();
 		eventList.forEach((msg)->{
 			System.out.println(msg.getTimestamp() + " :: " + msg.getMessage());
 		});
 	}
 
 	@Test
-	public void checkNumberOfArrivedEventsSize(){
-		assertEquals("Size of Msg Received List", expectedNumberOfMessagesExpected, gateway.getMessageArrivedEventList().size());
-	}
-
-	@Test
 	public void checkMessageOrder() {
+		checkNumberOfArrivedEventsSize();
 		boolean firstGroup = true;
-		List<MessageArrivedEvent> eventList = gateway.getMessageArrivedEventList();
+		Queue<MessageArrivedEvent> eventList = gateway.getMessageArrivedEventQueue();
 		if(eventList.size() ==  expectedNumberOfMessagesExpected){
 			for(int msgNum = 0; msgNum < numberOfMessagesSentByEachGroup; msgNum++){
-				GatewayMessage msg = eventList.get(msgNum).getMessage();
+				GatewayMessage msg = eventList.iterator().next().getMessage();
 				if(firstGroup){
 					assertEquals("Msg Group Id First Group Test", msg.getGroupId().getInternalId(), groupIds.get(0));
 				}else{
@@ -91,5 +88,9 @@ public class UnitTest_FIFO_ForwardingStrategy_TwoMessageGroupsInterleaving {
 				firstGroup=!firstGroup;
 			}
 		}
+	}
+	
+	private void checkNumberOfArrivedEventsSize(){
+		assertEquals("Size of Msg Received List", expectedNumberOfMessagesExpected, gateway.getMessageArrivedEventQueue().size());
 	}
 }

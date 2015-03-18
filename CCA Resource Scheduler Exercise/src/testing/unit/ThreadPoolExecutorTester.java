@@ -17,7 +17,6 @@ import testing.TestMessage;
 public class ThreadPoolExecutorTester {
 
 	public static void main(String[] args) {
-		Lock lock = new ReentrantLock();
 		TestGateway gateway = new TestGateway(1);
 
 		BlockingQueue<Runnable> workQueue = new ArrayBlockingQueue<>(100);
@@ -29,7 +28,7 @@ public class ThreadPoolExecutorTester {
 		};
 		ThreadPoolExecutor p = new ThreadPoolExecutor(100, 100, 1000, TimeUnit.HOURS, workQueue, threadFactory);
 		Consumer<GatewayMessage> c = (e)->{
-			p.submit(new GroupMessageWorker(lock, gateway, e, 1000));
+			p.submit(new GroupMessageWorker(gateway, e, 1000));
 		};
 
 		for (int i = 0; i < 1000; i++) {

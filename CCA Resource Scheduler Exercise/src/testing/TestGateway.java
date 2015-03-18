@@ -3,7 +3,10 @@ package testing;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
 import java.util.Random;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -34,7 +37,7 @@ public class TestGateway implements Gateway {
 		}
 	}
 
-	private List<MessageArrivedEvent> listMessageArrivedEvents = new ArrayList<>();
+	private Queue<MessageArrivedEvent> messageArrivedEventQueue = new ArrayBlockingQueue<MessageArrivedEvent>(2000);
 	private int timeToProcessMessages = 1000;
 
 	public TestGateway(int timeToProcessMessages) {
@@ -43,8 +46,8 @@ public class TestGateway implements Gateway {
 
 	@Override
 	public void send(GatewayMessage msg) {
-		listMessageArrivedEvents.add(new MessageArrivedEvent(LocalDateTime.now(), msg));
-		//System.out.println("Test Gateway :: send :: Received message " + msg + " count " + listMessageArrivedEvents.size());
+		messageArrivedEventQueue.add(new MessageArrivedEvent(LocalDateTime.now(), msg));
+		System.out.println("Test Gateway :: send :: Received message " + msg + " count " + messageArrivedEventQueue.size());
 		try {
 			Thread.sleep(timeToProcessMessages);
 		} catch (InterruptedException e) {
@@ -53,7 +56,7 @@ public class TestGateway implements Gateway {
 		msg.completed();
 	}
 
-	public List<MessageArrivedEvent> getMessageArrivedEventList() {
-		return this.listMessageArrivedEvents;
+	public Queue<MessageArrivedEvent> getMessageArrivedEventQueue() {
+		return this.messageArrivedEventQueue;
 	}
 }

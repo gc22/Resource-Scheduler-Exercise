@@ -15,17 +15,23 @@ import external.interfaces.GatewayMessage;
 import external.interfaces.GroupId;
 import resource.scheduler.interfaces.ForwardingStrategy;
 
+/**
+ * 
+ * @author garry.craig
+ *
+ */
 public class GroupedForwardingStrategy implements ForwardingStrategy<GatewayMessage>{
 	private static final int MAX_WORKER_QUEUE_SIZE = 1000;
 	private static final int START_DEFAULT_WORKER_THREAD_COUNT_NUMBER = 1000;
 	private static final int MAX_DEFAULT_WORKER_THREAD_COUNT_NUMBER = 1000;
+	private static final int MAX_DEFAULT_QUEUE_SIZE = 1000;
 
 	private BlockingQueue<Runnable> workQueue = null;
 	private ThreadFactory threadFactory = null;
 	private ThreadPoolExecutor pool = null;
 	private Map<Object, GroupMessageWorker> workerMap;
 	private Gateway gateway = null;
-	private Lock gatewayLock;
+	private int maxMessageQueueSize = MAX_DEFAULT_QUEUE_SIZE;
 
 	public GroupedForwardingStrategy(Gateway gateway) {
 		this.gateway = gateway;
@@ -37,20 +43,49 @@ public class GroupedForwardingStrategy implements ForwardingStrategy<GatewayMess
 			}
 		};
 		this.pool = new ThreadPoolExecutor(START_DEFAULT_WORKER_THREAD_COUNT_NUMBER, MAX_DEFAULT_WORKER_THREAD_COUNT_NUMBER, 1000, TimeUnit.MINUTES, workQueue, threadFactory);
-		this.gatewayLock = new ReentrantLock();
 		this.workerMap = new HashMap<>();
+	}
+	
+	public GroupedForwardingStrategy(Gateway gateway, int amountOfResources){
+		this.gateway = gateway;
+		this.workQueue = new ArrayBlockingQueue<Runnable>(MAX_WORKER_QUEUE_SIZE);
+		this.threadFactory = new ThreadFactory() {
+			@Override
+			public Thread newThread(Runnable r) {
+				return new Thread(r);
+			}
+		};
+		this.pool = new ThreadPoolExecutor(amountOfResources, amountOfResources, 1000, TimeUnit.MINUTES, workQueue, threadFactory);
+		this.workerMap = new HashMap<>();
+	}
+	
+	public GroupedForwardingStrategy(Gateway gateway, int amountOfResources, int maxNumberOfGroups) {
+		this.gateway = gateway;
+		this.workQueue = new ArrayBlockingQueue<Runnable>(maxNumberOfGroups);
+		this.threadFactory = new ThreadFactory() {
+			@Override
+			public Thread newThread(Runnable r) {
+				return new Thread(r);
+			}
+		};
+		this.pool = new ThreadPoolExecutor(amountOfResources, amountOfResources, 1000, TimeUnit.MINUTES, workQueue, threadFactory);
+		this.workerMap = new HashMap<>();
+	}
+	
+	public void setMaxMessageQueueLength(int maxMessageQueueSize){
+		this.maxMessageQueueSize = maxMessageQueueSize;
 	}
 
 	@Override
 	public void accept(GatewayMessage message) {
 		Object key = message.getGroupId().getInternalId();
 		if(workerMap.containsKey(key)){
-			//System.out.println("ResourceScheduler :: accept :: Contains key " + key);
+			System.out.println("ResourceScheduler :: accept :: Contains key " + key);
 			GroupMessageWorker worker = workerMap.get(key);
 			worker.addJob(message);
 		}else{
-			//System.out.println("ResourceScheduler :: accept :: New key " + key);
-			GroupMessageWorker worker = new GroupMessageWorker(gatewayLock, gateway, message, MAX_WORKER_QUEUE_SIZE);
+			System.out.println("ResourceScheduler :: accept :: New key " + key);
+			GroupMessageWorker worker = new GroupMessageWorker(gateway, message, maxMessageQueueSize);
 			workerMap.put(key, worker);
 			pool.submit(worker);
 		}
@@ -59,6 +94,9 @@ public class GroupedForwardingStrategy implements ForwardingStrategy<GatewayMess
 	public void shutdown(){
 		//System.out.println("ResourceScheduler :: shutdown :: approx number of workers in pool " + pool.getTaskCount());
 		pool.shutdown();
+		workerMap.forEach((key,worker)->{
+			worker.shutdown();
+		});
 	}
 
 	@Override

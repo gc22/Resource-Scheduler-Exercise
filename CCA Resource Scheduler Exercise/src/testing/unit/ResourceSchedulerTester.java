@@ -34,7 +34,7 @@ public class ResourceSchedulerTester {
 
 		resourceScheduler.awaitTermination(1000, TimeUnit.DAYS);
 
-		gateway.getMessageArrivedEventList().forEach((item)->System.out.println(item.getTimestamp() + " :: " + item.getMessage()));
+		gateway.getMessageArrivedEventQueue().forEach((item)->System.out.println(item.getTimestamp() + " :: " + item.getMessage()));
 	}
 
 	public static void sendMessages(ResourceScheduler resourceScheduler, int numberOfMessages){

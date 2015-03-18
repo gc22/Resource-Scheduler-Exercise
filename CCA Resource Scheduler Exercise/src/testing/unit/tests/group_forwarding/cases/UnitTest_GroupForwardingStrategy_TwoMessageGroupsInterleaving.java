@@ -8,6 +8,7 @@ import static org.junit.Assert.*;
 import java.net.PasswordAuthentication;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Queue;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.After;
@@ -36,6 +37,7 @@ public class UnitTest_GroupForwardingStrategy_TwoMessageGroupsInterleaving {
 	private static final int timeGatewayTakesToProcessMessage = 1;
 	private static final int expectedNumberOfMessagesExpected = 10;
 	private static final int numberOfMessagesSentByEachGroup = 5;
+	private static final int numberOfResourcesAvailable = 1;
 
 	@SuppressWarnings("serial")
 	private static final List<Integer> groupIds = new ArrayList<Integer>(){{
@@ -49,7 +51,7 @@ public class UnitTest_GroupForwardingStrategy_TwoMessageGroupsInterleaving {
 	@Before
 	public void setUp() throws Exception {
 		gateway = new TestGateway(timeGatewayTakesToProcessMessage);
-		forwardingStrategy = new GroupedForwardingStrategy(gateway);
+		forwardingStrategy = new GroupedForwardingStrategy(gateway, numberOfResourcesAvailable);
 		resourceScheduler = new ResourceScheduler(forwardingStrategy);
 
 		for(int count = 0; count < numberOfMessagesSentByEachGroup; count++){
@@ -63,30 +65,35 @@ public class UnitTest_GroupForwardingStrategy_TwoMessageGroupsInterleaving {
 		//displayEventList();
 	}
 
+	/**
+	 * 
+	 */
 	private void displayEventList() {
-		List<MessageArrivedEvent> eventList = gateway.getMessageArrivedEventList();
+		Queue<MessageArrivedEvent> eventList = gateway.getMessageArrivedEventQueue();
 		eventList.forEach((msg)->{
 			System.out.println(msg.getTimestamp() + " :: " + msg.getMessage());
 		});
 	}
 
 	@Test
-	public void checkNumberOfArrivedEventsSize(){
-		assertEquals("Size of Msg Received List", expectedNumberOfMessagesExpected, gateway.getMessageArrivedEventList().size());
-	}
-
-	@Test
 	public void checkMessageOrder() {
-		List<MessageArrivedEvent> eventList = gateway.getMessageArrivedEventList();
+		checkNumberOfArrivedEventsSize();
+		Queue<MessageArrivedEvent> eventList = gateway.getMessageArrivedEventQueue();
 		if(eventList.size() ==  expectedNumberOfMessagesExpected){
-			for(int msgNum = 0; msgNum < numberOfMessagesSentByEachGroup; msgNum++){
-				GatewayMessage msg = eventList.get(msgNum).getMessage();
+			int msgNum = 0;
+			for(MessageArrivedEvent event : gateway.getMessageArrivedEventQueue()){
+				GatewayMessage msg = event.getMessage();				
 				if(msgNum < numberOfMessagesSentByEachGroup){
 					assertEquals("Msg Group Id First Group Test", msg.getGroupId().getInternalId(), groupIds.get(0));
 				}else{
 					assertEquals("Msg Group Id Second Group Test", msg.getGroupId().getInternalId(), groupIds.get(1));
 				}
+				msgNum++;
 			}
 		}
+	}
+	
+	private void checkNumberOfArrivedEventsSize(){
+		assertEquals("Size of Msg Received List", expectedNumberOfMessagesExpected, gateway.getMessageArrivedEventQueue().size());
 	}
 }
