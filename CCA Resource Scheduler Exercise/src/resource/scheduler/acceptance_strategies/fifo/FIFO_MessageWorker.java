@@ -1,4 +1,4 @@
-package resource.scheduler.interfaces;
+package resource.scheduler.acceptance_strategies.fifo;
 
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
